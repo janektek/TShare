@@ -1,21 +1,21 @@
 #include "info.h"
 
-int main(int argc, char **argv) {
-    char buffer[BUFF_SIZE];
-    char protoname[] = "tcp";
-    struct protoent *protoent;
-    char *server_hostname = "127.0.0.1";
-    char *user_input = NULL;
-    in_addr_t in_addr;
-    in_addr_t server_addr;
-    int sockfd;
-    size_t getline_buffer = 0;
-    ssize_t nbytes_read, i, user_input_len;
-    struct hostent *hostent;
-    /* This is the struct used by INet addresses. */
-    struct sockaddr_in sockaddr_in;
-    unsigned short server_port = 6969u;
+char buffer[BUFF_SIZE];
+char protoname[] = "tcp";
+struct protoent *protoent;
+char *server_hostname = "127.0.0.1";
+char *user_input = NULL;
+in_addr_t in_addr;
+in_addr_t server_addr;
+int sockfd;
+size_t getline_buffer = 0;
+ssize_t nbytes_read, i, user_input_len;
+struct hostent *hostent;
+/* This is the struct used by INet addresses. */
+struct sockaddr_in sockaddr_in;
+unsigned short server_port = 6969u;
 
+void init_client(int argc, char **argv) {
     if (argc > 1) {
         server_hostname = argv[1];
         if (argc > 2) {
@@ -26,13 +26,11 @@ int main(int argc, char **argv) {
     /* Get socket. */
     protoent = getprotobyname(protoname);
     if (protoent == NULL) {
-        perror("getprotobyname");
-        exit(EXIT_FAILURE);
+        THROW("getprotobyname");
     }
     sockfd = socket(AF_INET, SOCK_STREAM, protoent->p_proto);
     if (sockfd == -1) {
-        perror("socket");
-        exit(EXIT_FAILURE);
+        THROW("socket");
     }
 
     /* Prepare sockaddr_in. */
@@ -52,23 +50,28 @@ int main(int argc, char **argv) {
 
     /* Do the actual connection. */
     if (connect(sockfd, (struct sockaddr*)&sockaddr_in, sizeof(sockaddr_in)) == -1) {
-        perror("connecta");
-        return EXIT_FAILURE;
+        THROW("connect");
     }
+
+}
+
+int main(int argc, char **argv) {
+
+    init_client(argc, argv);
+
+
     while (1) {
         fprintf(stderr, "enter string (empty to quit):\n");
         user_input_len = getline(&user_input, &getline_buffer, stdin);
         if (user_input_len == -1) {
-            perror("getline");
-            exit(EXIT_FAILURE);
+            THROW("getline");
         }
         if (user_input_len == 1) {
             close(sockfd);
             break;
         }
         if (write(sockfd, user_input, user_input_len) == -1) {
-            perror("write");
-            exit(EXIT_FAILURE);
+            THROW("write");
         }
         while ((nbytes_read = read(sockfd, buffer, BUFF_SIZE)) > 0) {
             write(STDOUT_FILENO, buffer, nbytes_read);
