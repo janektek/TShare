@@ -1,9 +1,15 @@
+# set your preferred compiler
+COMPILER = gcc
+
 # set your preferred terminal
 TERMINAL = xfce4-terminal 
 
+# specify flags
+FLAGS = -Wall -Wextra -ggdb
+
 build: client.c server.c info.h
-	gcc -o client client.c
-	gcc -o server server.c
+	$(COMPILER) $(FLAGS) -o client client.c
+	$(COMPILER) $(FLAGS) -o server server.c
 
 run: 
 	$(TERMINAL) -e ./server
