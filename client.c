@@ -1,18 +1,4 @@
-#define _XOPEN_SOURCE 700
-
-#include <assert.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <arpa/inet.h>
-#include <netdb.h> /* getprotobyname */
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
-#define BUFF_SIZE 2048
+#include "info.h"
 
 int main(int argc, char **argv) {
     char buffer[BUFF_SIZE];
@@ -66,7 +52,7 @@ int main(int argc, char **argv) {
 
     /* Do the actual connection. */
     if (connect(sockfd, (struct sockaddr*)&sockaddr_in, sizeof(sockaddr_in)) == -1) {
-        perror("connect");
+        perror("connecta");
         return EXIT_FAILURE;
     }
     while (1) {
