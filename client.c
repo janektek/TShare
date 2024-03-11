@@ -4,12 +4,10 @@ char buffer[BUFF_SIZE];
 char protoname[] = "tcp";
 struct protoent *protoent;
 char *server_hostname = "127.0.0.1";
-char *user_input = NULL;
 in_addr_t in_addr;
 in_addr_t server_addr;
 int sockfd;
 size_t getline_buffer = 0;
-ssize_t nbytes_read, i, user_input_len;
 struct hostent *hostent;
 
 /* This is the struct used by INet addresses. */
@@ -27,11 +25,11 @@ void init_client(int argc, char **argv) {
     /* Get socket. */
     protoent = getprotobyname(protoname);
     if (protoent == NULL) {
-        THROW_EXCEPTION("getprotobyname");
+        ERROR("getprotobyname");
     }
     sockfd = socket(AF_INET, SOCK_STREAM, protoent->p_proto);
     if (sockfd == -1) {
-        THROW_EXCEPTION("socket");
+        ERROR("socket");
     }
 
     /* Prepare sockaddr_in. */
@@ -51,29 +49,37 @@ void init_client(int argc, char **argv) {
 
     /* Do the actual connection. */
     if (connect(sockfd, (struct sockaddr*)&sockaddr_in, sizeof(sockaddr_in)) == -1) {
-        THROW_EXCEPTION("connect");
+        ERROR("connect");
     }
 
 }
+
+struct Chunk chunk;
+ssize_t nbytes_read, i, user_input_len;
+
 
 int main(int argc, char **argv) {
 
     init_client(argc, argv);
 
+    chunk.msg = HELO;
+
     while (1) {
         fprintf(stderr, "enter string (empty to quit):\n");
-        user_input_len = getline(&user_input, &getline_buffer, stdin);
+        user_input_len = getline(&chunk.content, &getline_buffer, stdin);
         if (user_input_len == -1) {
-            THROW_EXCEPTION("getline");
+            ERROR("getline");
         }
         if (user_input_len == 1) {
             close(sockfd);
             break;
         }
-        if (write(sockfd, user_input, user_input_len) == -1) {
-            THROW_EXCEPTION("write");
+        if (write_msg(sockfd, chunk) == -1) {
+            ERROR("write");
         }
-        while ((nbytes_read = read(sockfd, buffer, BUFF_SIZE)) > 0) {
+
+        // writing to std_out for debugging
+        while ((nbytes_read = read(sockfd, buffer, MAX_CHUNK_LEN)) > 0) {
             write(STDOUT_FILENO, buffer, nbytes_read);
             if (buffer[nbytes_read - 1] == '\n') {
                 fflush(stdout);
@@ -81,7 +87,7 @@ int main(int argc, char **argv) {
             }
         }
     }
-    free(user_input);
+    free(chunk.content);
 
     exit(EXIT_SUCCESS);
 }

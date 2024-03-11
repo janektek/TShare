@@ -12,45 +12,60 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#define THROW_EXCEPTION(msg) do { \
+#define ERROR(msg) do { \
         perror(msg);        \
         exit(EXIT_FAILURE); \
     } while(0)              \
 
+#define UNUSED(x) (void)(x)
+
 #define BUFF_SIZE 2048
+#define MAX_CHUNK_LEN 255
+
 
 enum Msg {
-    HELO = 0,
+    HELO,
     RDY,
     ACK,
     DONE,
+    BYE,
+};
+
+struct Chunk {
+    enum Msg msg;
+    char *content;
 };
 
 // possible states
-static char *strings[] = {"HELO\n", "RDY\n", "ACK\n", "DONE\n"};
+static char *strings[] = {"HELO", "RDY", "ACK", "DONE", "BYE"};
 
 char *msg_string(enum Msg msg) {
     return strings[msg];
+
 }
 
-size_t max_msg_len() {
-    int len = 0;
-    for (int i = 0; i < DONE; i++) {
-        int s = strlen(*(strings + i));
-        if (s > len) {
-            len = s;
-        }
+static char *build_msg(struct Chunk chunk) {
+    char *buf = calloc(sizeof(char), MAX_CHUNK_LEN);
+    buf[0] = chunk.msg + '0';
+    buf[1] = '\n';
+
+    for (int i = 0; i < MAX_CHUNK_LEN - 3; i++) {
+        buf[i + 2] = chunk.content[i]; 
     }
-    return len;
+    return buf;
 }
 
-void write_msg(int fd, enum Msg msg) {
-    char *ptr = msg_string(msg);
-    write(fd, ptr, strlen(ptr) + 1); 
+ssize_t write_msg(int fd, struct Chunk chunk) {
+    char *str = build_msg(chunk);
+    ssize_t ret = write(fd, str, strlen(str));
+    free(str);
+    return ret;
 }
 
 // TODO make this return enum
 void read_msg(int fd, void *buf, enum Msg msg) {
-    read(fd, buf, max_msg_len());
+    UNUSED(fd);
+    UNUSED(buf);
+    UNUSED(msg);
 }
 

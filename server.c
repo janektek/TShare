@@ -22,33 +22,33 @@ void init_server(int argc, char **argv) {
 
     protoent = getprotobyname(protoname);
     if (protoent == NULL) {
-        THROW_EXCEPTION("getprotobyname");  
+        ERROR("getprotobyname");  
     }
 
     server_sockfd = socket(AF_INET, SOCK_STREAM, protoent->p_proto);
     if (server_sockfd == -1) {
-        THROW_EXCEPTION("socket");
+        ERROR("socket");
     }
 
     if (setsockopt(server_sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) < 0) {
-        THROW_EXCEPTION("setsockopt(SO_REUSEADDR) failed");
+        ERROR("setsockopt(SO_REUSEADDR) failed");
     }
 
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = htonl(INADDR_ANY);
     server_address.sin_port = htons(server_port);
     if (bind(server_sockfd, (struct sockaddr*)&server_address, sizeof(server_address)) == -1) {
-        THROW_EXCEPTION("bind");
+        ERROR("bind");
     }
 
     if (listen(server_sockfd, 5) == -1) {
-        THROW_EXCEPTION("listen");
+        ERROR("listen");
     }
     fprintf(stdout, "listening on port %d\n", server_port);
 }
 
 
-volatile int main(int argc, char **argv) {
+int main(int argc, char **argv) {
 
     init_server(argc, argv);
 
@@ -61,14 +61,7 @@ volatile int main(int argc, char **argv) {
         while ((nbytes_read = read(client_sockfd, buffer, BUFF_SIZE)) > 0) { // read is blocking
             printf("received:\n");
             write(STDOUT_FILENO, buffer, nbytes_read);
-            if (buffer[nbytes_read - 1] == '\n')
-                newline_found;
             write(client_sockfd, buffer, nbytes_read);
-            // write_msg(client_sockfd, msg);
-            if (newline_found) {
-                printf("Breaking\n");
-                break;
-            }
         }
         close(client_sockfd);
     }
