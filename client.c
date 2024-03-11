@@ -1,4 +1,5 @@
 #include "info.h"
+#include <errno.h>
 
 char buffer[BUFF_SIZE];
 char protoname[] = "tcp";
@@ -53,53 +54,83 @@ void init_client(int argc, char **argv) {
     }
 
     printf("Connection to %s:%d established.\n", server_hostname, server_port);
+    printf("Welcome to TShare\nPlease choose one of the following options:\n");
 }
 
 static void print_menu() {
-    printf("Welcome to TShare\nPlease choose one of the following options:\n");
     printf("-------------------------------------------\n");
-    printf("(1)\tTransfer file\n(2)\tQuit TShare\n");
+    printf("Specify path to document to transfer\n");
     printf("-------------------------------------------\n");
 }
 
 
-char *input_ptr;     
-static int get_input () {
-    if (getline(&input_ptr, &getline_buffer, stdin) < 0) {
-        ERROR("reading user input");
+static char *get_file_name() {
+    char *path;
+    if (getline(&path, &getline_buffer, stdin) < 0) {
+        free(path);
+        close(sockfd);
+        ERROR("read user input");
     }
-    int ret = -1;
-    if (strlen(input_ptr) == 2) {
-        ret = input_ptr[0] - '0' - 1;
-    }
-    return ret;
 
+    strtok(path, "\n");     // remove trailing newline
+
+    if (!strcmp(path, "quit")) {
+        free(path);
+        close(sockfd);
+        printf("Good bye\n");
+        exit(EXIT_SUCCESS);
+    }
+
+    return path;
+} 
+
+static FILE *get_file(char* path) {
+    FILE *file = fopen(path, "r");
+    printf("Path: %s\n", path); 
+    if (!file) {
+        // TODO handle exception
+        free(path);
+        close(sockfd);
+        ERROR("opening file");
+    }
+    return file;
+}
+
+static long get_file_size(FILE *file) {
+    // Works with standard library. 
+    // TODO check if this works with WIN
+    fseek(file, 0, SEEK_END); // seek to end of file
+    long size = ftell(file); // get current file pointer
+    fseek(file, 0, SEEK_SET); // seek back to beginning of file
+    return size;
+
+}
+
+static FILE *open_file(const char *path, FILE *file, long *size) {
+    // TODO combined the 3 functions for file handling into this one
+    UNUSED(path);
+    UNUSED(file);
+    UNUSED(size);
+    return NULL;
 }
 
 struct Chunk chunk;
 ssize_t nbytes_read, i, user_input_len;
-enum State state;
 
+// TODO specify file path(s) over command line arguments
 int main(int argc, char **argv) {
 
     init_client(argc, argv);
 
-    // TODO send login message to server
-
-
-    while (true) {
+    while (1) {
         // menu chooser
         print_menu();
-        state = get_input(input_ptr);
-        printf("Chosen: %s\n", state_str(state));
+        char *path = get_file_name();
+        FILE *file = get_file(path);
+        long file_size = get_file_size(file);
 
-        if (state >= N_STATES || state < 0) {
-            printf("Invalid choice. Try again\n");
-            break;
-        }
-
-        if (state == EXIT) break; // TODO send logout Msg to server
-
+        printf("File %s with size: %ld opened successfully\n", path, file_size);
+        free(path);
 
         // communication with server
         fprintf(stdout, "enter string (empty to quit):\n");
@@ -125,7 +156,6 @@ int main(int argc, char **argv) {
         }
     }
     close(sockfd);
-    free(input_ptr);
     free(chunk.content);
 
     exit(EXIT_SUCCESS);

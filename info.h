@@ -24,20 +24,10 @@
 #define MAX_CHUNK_LEN 255
 
 
-
-enum State {
-    LOGIN = 0,
-    TASK,
-    LOGOUT,
-    EXIT,
-    N_STATES,
-};
-
 // TODO: consider merging these two enums
 
 enum Msg {
     HELO = 0,
-    TRANSFER,
     RDY,
     ACK,
     DONE,
@@ -50,14 +40,6 @@ struct Chunk {
     char *content;
 };
 
-// possible states
-static char *states[] = {"LOGIN", "TASK", "LOGOUT", "EXIT"};
-
-char *state_str(enum State state) {
-    if (state < N_STATES && state >= 0) return states[state];
-    else return "UNDEF STATE";
-
-}
 // possible meta messages
 static char *messages[] = {"HELO", "TRANSFER", "RDY", "ACK", "DONE", "BYE"};
 
