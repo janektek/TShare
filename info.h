@@ -12,7 +12,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#define THROW(msg) do {     \
+#define THROW_EXCEPTION(msg) do { \
         perror(msg);        \
         exit(EXIT_FAILURE); \
     } while(0)              \
@@ -27,7 +27,7 @@ enum Msg {
 };
 
 // possible states
-static char *strings[] = {"HELO", "RDY", "ACK", "DONE"};
+static char *strings[] = {"HELO\n", "RDY\n", "ACK\n", "DONE\n"};
 
 char *msg_string(enum Msg msg) {
     return strings[msg];

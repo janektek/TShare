@@ -11,6 +11,7 @@ int sockfd;
 size_t getline_buffer = 0;
 ssize_t nbytes_read, i, user_input_len;
 struct hostent *hostent;
+
 /* This is the struct used by INet addresses. */
 struct sockaddr_in sockaddr_in;
 unsigned short server_port = 6969u;
@@ -26,11 +27,11 @@ void init_client(int argc, char **argv) {
     /* Get socket. */
     protoent = getprotobyname(protoname);
     if (protoent == NULL) {
-        THROW("getprotobyname");
+        THROW_EXCEPTION("getprotobyname");
     }
     sockfd = socket(AF_INET, SOCK_STREAM, protoent->p_proto);
     if (sockfd == -1) {
-        THROW("socket");
+        THROW_EXCEPTION("socket");
     }
 
     /* Prepare sockaddr_in. */
@@ -50,7 +51,7 @@ void init_client(int argc, char **argv) {
 
     /* Do the actual connection. */
     if (connect(sockfd, (struct sockaddr*)&sockaddr_in, sizeof(sockaddr_in)) == -1) {
-        THROW("connect");
+        THROW_EXCEPTION("connect");
     }
 
 }
@@ -59,19 +60,18 @@ int main(int argc, char **argv) {
 
     init_client(argc, argv);
 
-
     while (1) {
         fprintf(stderr, "enter string (empty to quit):\n");
         user_input_len = getline(&user_input, &getline_buffer, stdin);
         if (user_input_len == -1) {
-            THROW("getline");
+            THROW_EXCEPTION("getline");
         }
         if (user_input_len == 1) {
             close(sockfd);
             break;
         }
         if (write(sockfd, user_input, user_input_len) == -1) {
-            THROW("write");
+            THROW_EXCEPTION("write");
         }
         while ((nbytes_read = read(sockfd, buffer, BUFF_SIZE)) > 0) {
             write(STDOUT_FILENO, buffer, nbytes_read);
