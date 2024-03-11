@@ -52,20 +52,57 @@ void init_client(int argc, char **argv) {
         ERROR("connect");
     }
 
+    printf("Connection to %s:%d established.\n", server_hostname, server_port);
+}
+
+static void print_menu() {
+    printf("Welcome to TShare\nPlease choose one of the following options:\n");
+    printf("-------------------------------------------\n");
+    printf("(1)\tTransfer file\n(2)\tQuit TShare\n");
+    printf("-------------------------------------------\n");
+}
+
+
+char *input_ptr;     
+static int get_input () {
+    if (getline(&input_ptr, &getline_buffer, stdin) < 0) {
+        ERROR("reading user input");
+    }
+    int ret = -1;
+    if (strlen(input_ptr) == 2) {
+        ret = input_ptr[0] - '0' - 1;
+    }
+    return ret;
+
 }
 
 struct Chunk chunk;
 ssize_t nbytes_read, i, user_input_len;
-
+enum State state;
 
 int main(int argc, char **argv) {
 
     init_client(argc, argv);
 
-    chunk.msg = HELO;
+    // TODO send login message to server
 
-    while (1) {
-        fprintf(stderr, "enter string (empty to quit):\n");
+
+    while (true) {
+        // menu chooser
+        print_menu();
+        state = get_input(input_ptr);
+        printf("Chosen: %s\n", state_str(state));
+
+        if (state >= N_STATES || state < 0) {
+            printf("Invalid choice. Try again\n");
+            break;
+        }
+
+        if (state == EXIT) break; // TODO send logout Msg to server
+
+
+        // communication with server
+        fprintf(stdout, "enter string (empty to quit):\n");
         user_input_len = getline(&chunk.content, &getline_buffer, stdin);
         if (user_input_len == -1) {
             ERROR("getline");
@@ -78,7 +115,7 @@ int main(int argc, char **argv) {
             ERROR("write");
         }
 
-        // writing to std_out for debugging
+        // writing message to additionally to stdout 
         while ((nbytes_read = read(sockfd, buffer, MAX_CHUNK_LEN)) > 0) {
             write(STDOUT_FILENO, buffer, nbytes_read);
             if (buffer[nbytes_read - 1] == '\n') {
@@ -87,6 +124,8 @@ int main(int argc, char **argv) {
             }
         }
     }
+    close(sockfd);
+    free(input_ptr);
     free(chunk.content);
 
     exit(EXIT_SUCCESS);

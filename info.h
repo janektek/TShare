@@ -20,15 +20,29 @@
 #define UNUSED(x) (void)(x)
 
 #define BUFF_SIZE 2048
+
 #define MAX_CHUNK_LEN 255
 
 
+
+enum State {
+    LOGIN = 0,
+    TASK,
+    LOGOUT,
+    EXIT,
+    N_STATES,
+};
+
+// TODO: consider merging these two enums
+
 enum Msg {
-    HELO,
+    HELO = 0,
+    TRANSFER,
     RDY,
     ACK,
     DONE,
     BYE,
+    N_MSGS,
 };
 
 struct Chunk {
@@ -37,10 +51,19 @@ struct Chunk {
 };
 
 // possible states
-static char *strings[] = {"HELO", "RDY", "ACK", "DONE", "BYE"};
+static char *states[] = {"LOGIN", "TASK", "LOGOUT", "EXIT"};
+
+char *state_str(enum State state) {
+    if (state < N_STATES && state >= 0) return states[state];
+    else return "UNDEF STATE";
+
+}
+// possible meta messages
+static char *messages[] = {"HELO", "TRANSFER", "RDY", "ACK", "DONE", "BYE"};
 
 char *msg_string(enum Msg msg) {
-    return strings[msg];
+    if (msg < N_MSGS && msg >= 0) return messages[msg];
+    else return "UNDEF MESSAGE";
 
 }
 
@@ -62,8 +85,8 @@ ssize_t write_msg(int fd, struct Chunk chunk) {
     return ret;
 }
 
-// TODO make this return enum
 void read_msg(int fd, void *buf, enum Msg msg) {
+    // TODO parse msg
     UNUSED(fd);
     UNUSED(buf);
     UNUSED(msg);
