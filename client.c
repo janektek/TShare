@@ -15,7 +15,8 @@ struct hostent *hostent;
 struct sockaddr_in sockaddr_in;
 unsigned short server_port = 6969u;
 
-void init_client(int argc, char **argv) {
+int init_client(int argc, char **argv) {
+
     if (argc > 1) {
         server_hostname = argv[1];
         if (argc > 2) {
@@ -30,19 +31,23 @@ void init_client(int argc, char **argv) {
     }
     sockfd = socket(AF_INET, SOCK_STREAM, protoent->p_proto);
     if (sockfd == -1) {
-        ERROR("socket");
+        close(sockfd);
+        fprintf(stderr, "Socket could not be opened.");
+        return -1;
     }
 
     /* Prepare sockaddr_in. */
     hostent = gethostbyname(server_hostname);
     if (hostent == NULL) {
+        close(sockfd);
         fprintf(stderr, "error: gethostbyname(\"%s\")\n", server_hostname);
-        exit(EXIT_FAILURE);
+        return -1;
     }
     in_addr = inet_addr(inet_ntoa(*(struct in_addr*)*(hostent->h_addr_list)));
     if (in_addr == (in_addr_t)-1) {
         fprintf(stderr, "error: inet_addr(\"%s\")\n", *(hostent->h_addr_list));
-        exit(EXIT_FAILURE);
+        close(sockfd);
+        return -1;
     }
     sockaddr_in.sin_addr.s_addr = in_addr;
     sockaddr_in.sin_family = AF_INET;
@@ -50,11 +55,14 @@ void init_client(int argc, char **argv) {
 
     /* Do the actual connection. */
     if (connect(sockfd, (struct sockaddr*)&sockaddr_in, sizeof(sockaddr_in)) == -1) {
-        ERROR("connect");
+        close(sockfd);
+        fprintf(stderr, "Could not connect to server. Trying again\n");
+        return -1;
     }
 
     printf("Connection to %s:%d established.\n", server_hostname, server_port);
     printf("Welcome to TShare\nPlease choose one of the following options:\n");
+    return 0;
 }
 
 static void print_menu() {
@@ -120,7 +128,12 @@ ssize_t nbytes_read, i, user_input_len;
 // TODO specify file path(s) over command line arguments
 int main(int argc, char **argv) {
 
-    init_client(argc, argv);
+    UNUSED(open_file(NULL, NULL, 0));
+
+    while (init_client(argc, argv)) {
+        fprintf(stderr, "Could not establish a connection to the server. Trying again in 1 second.\n");
+        sleep(1);
+    }
 
     while (1) {
         // menu chooser
