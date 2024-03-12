@@ -1,6 +1,6 @@
 #include "info.h"
 
-char buffer[BUFF_SIZE];
+char buffer[MAX_CHUNK_LEN];
 char *protoname = "tcp";
 struct protoent *protoent;
 int enable = 1;
@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
         client_sockfd = accept(server_sockfd, (struct sockaddr*)&client_address, &client_len);
         printf("Accepted Connection, Client socked id: %d\n", client_sockfd);
 
-        while ((nbytes_read = read(client_sockfd, buffer, BUFF_SIZE)) > 0) { // read is blocking
+        while ((nbytes_read = read(client_sockfd, buffer, MAX_CHUNK_LEN)) > 0) { // read is blocking
             printf("received:\n");
             write(STDOUT_FILENO, buffer, nbytes_read);
             write(client_sockfd, buffer, nbytes_read);

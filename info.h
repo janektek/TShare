@@ -19,12 +19,13 @@
 
 #define UNUSED(x) (void)(x)
 
-#define BUFF_SIZE 2048
 
-#define MAX_CHUNK_LEN 255
+// max_chunk_len = Msg + '\n' + file_size + \n' + raw_content + NULL
+//         bytes:   1      1    size(long)  1      2000       +  1 = 1 + 1 + 4 + 1 + 2000 + 1 = 2008 bytes max
+#define MAX_CHUNK_LEN 20
+#define CONTENT_SIZE 2000
 
 
-// TODO: consider merging these two enums
 
 enum Msg {
     HELO = 0,
@@ -38,10 +39,11 @@ enum Msg {
 struct Chunk {
     enum Msg msg;
     char *content;
+    long size;
 };
 
 // possible meta messages
-static char *messages[] = {"HELO", "TRANSFER", "RDY", "ACK", "DONE", "BYE"};
+static char *messages[] = {"HELO", "RDY", "ACK", "DONE", "BYE"};
 
 char *msg_string(enum Msg msg) {
     if (msg < N_MSGS && msg >= 0) return messages[msg];
@@ -50,13 +52,29 @@ char *msg_string(enum Msg msg) {
 }
 
 static char *build_msg(struct Chunk chunk) {
+    size_t counter = 0;
     char *buf = calloc(sizeof(char), MAX_CHUNK_LEN);
-    buf[0] = chunk.msg + '0';
-    buf[1] = '\n';
+    buf[counter++] = chunk.msg + '0';
+    buf[counter++] = '\n';
 
-    for (int i = 0; i < MAX_CHUNK_LEN - 3; i++) {
-        buf[i + 2] = chunk.content[i]; 
+    printf("Infos to encode: \n\tMsg: %d\n\tContent: %s\n\tSize: %ld\n", chunk.msg, chunk.content, chunk.size);
+
+    // alloc mem for long to string
+    char *size_str = malloc(sizeof(long));  // sprintf needs prealloc
+    sprintf(size_str, "%ld", chunk.size); 
+    size_t len = strlen(size_str);
+    for (size_t i = 0; i < len; i++) {
+        buf[counter++] = size_str[i];
     }
+    buf[counter++] = '\n';
+    free(size_str);
+
+
+    len = strlen(chunk.content);
+    for (size_t i = 0; i < len - 1; i++) {
+        buf[counter++] = chunk.content[i]; 
+    }
+    printf("Created message: \n%s\n", buf);
     return buf;
 }
 
