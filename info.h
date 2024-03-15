@@ -22,7 +22,7 @@
 
 // max_chunk_len = Msg + '\n' + file_size + \n' + raw_content + NULL
 //         bytes:   1      1    size(long)  1      2000       +  1 = 1 + 1 + 4 + 1 + 2000 + 1 = 2008 bytes max
-#define MAX_CHUNK_LEN 20
+#define MAX_CHUNK_LEN 2000
 #define CONTENT_SIZE 2000
 
 
@@ -51,13 +51,19 @@ char *msg_string(enum Msg msg) {
 
 }
 
+void print_chunk(struct Chunk chunk) {
+    printf("Infos to encode: \n\tMsg: %s\n\tContent: %s\n\tSize: %ld\n", msg_string(chunk.msg), chunk.content, chunk.size);
+}
+
 static char *build_msg(struct Chunk chunk) {
+
+    print_chunk(chunk);
+
     size_t counter = 0;
-    char *buf = calloc(sizeof(char), MAX_CHUNK_LEN);
+    char *buf = calloc(sizeof(char), chunk.size + 10);
     buf[counter++] = chunk.msg + '0';
     buf[counter++] = '\n';
 
-    printf("Infos to encode: \n\tMsg: %d\n\tContent: %s\n\tSize: %ld\n", chunk.msg, chunk.content, chunk.size);
 
     // alloc mem for long to string
     char *size_str = malloc(sizeof(long));  // sprintf needs prealloc
@@ -70,17 +76,19 @@ static char *build_msg(struct Chunk chunk) {
     free(size_str);
 
 
-    len = strlen(chunk.content);
-    for (size_t i = 0; i < len - 1; i++) {
-        buf[counter++] = chunk.content[i]; 
+    if (chunk.content != NULL) {
+        for (size_t i = 0; i < chunk.size; i++) {
+            buf[counter++] = chunk.content[i]; 
+        }
     }
+    buf[counter++] = '\0';  // end of chunk
     printf("Created message: \n%s\n", buf);
     return buf;
 }
 
 ssize_t write_msg(int fd, struct Chunk chunk) {
     char *str = build_msg(chunk);
-    ssize_t ret = write(fd, str, strlen(str));
+    ssize_t ret = write(fd, str, chunk.size + 10);
     free(str);
     return ret;
 }

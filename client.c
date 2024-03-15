@@ -1,4 +1,5 @@
 #include "info.h"
+#include <errno.h>
 
 char buffer[MAX_CHUNK_LEN];
 char protoname[] = "tcp";
@@ -123,11 +124,12 @@ int main(int argc, char **argv) {
         print_menu();
 
 
-        char *path = "/home/tschan/.vimrc";
+        char *path = "/home/tschan/Coding/TShare/Makefile";
         // char *path = NULL;
         long file_size = 0;
         FILE *file = open_file(&path, &file_size);
-        UNUSED(file);
+        int fd = fileno(file);
+        printf("FD: %d\n", fd);
 
         printf("File %s with size: %ld opened successfully\n", path, file_size);
         //free(path);
@@ -135,31 +137,42 @@ int main(int argc, char **argv) {
         chunk.msg = RDY;
         chunk.size = file_size;
 
-        // communication with server
-        fprintf(stdout, "enter string (empty to quit):\n");
-        user_input_len = getline(&chunk.content, &getline_buffer, stdin);
-        if (user_input_len == -1) {
-            ERROR("getline");
+
+        chunk.content = calloc(file_size, sizeof(char)); // fgets needs prealloc 
+        size_t bytes_read = fread(chunk.content, sizeof(char), file_size + 1, file);
+        if (bytes_read <= 0) {
+            ERROR("reading input file");
         }
-        if (user_input_len == 1) {
-            close(sockfd);
-            break;
-        }
+        printf("Read content: %s\n", chunk.content);
+
+        //// communication with server
+        //fprintf(stdout, "enter string (empty to quit):\n");
+        //user_input_len = getline(&chunk.content, &getline_buffer, stdin);
+        //if (user_input_len == -1) {
+        //    ERROR("getline");
+        //}
+        //if (user_input_len == 1) {
+        //    close(sockfd);
+        //    break;
+        //}
         if (write_msg(sockfd, chunk) == -1) {
             ERROR("write");
         }
 
+        free(chunk.content);
+
         // writing message to additionally to stdout 
-        while ((nbytes_read = read(sockfd, buffer, MAX_CHUNK_LEN)) > 0) {
-            write(STDOUT_FILENO, buffer, nbytes_read);
-            if (buffer[nbytes_read - 1] == '\n') {
-                fflush(stdout);
-                break;
-            }
-        }
+        //while ((nbytes_read = read(sockfd, buffer, MAX_CHUNK_LEN)) > 0) {
+        //    write(STDOUT_FILENO, buffer, nbytes_read);
+        //    if (buffer[nbytes_read - 1] == '\n') {
+        //        fflush(stdout);
+        //        break;
+        //    }
+        //}
+        break;
     }
     close(sockfd);
-    free(chunk.content);
+    //free(chunk.content);
 
     exit(EXIT_SUCCESS);
 }
