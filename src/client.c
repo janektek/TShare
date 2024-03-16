@@ -73,26 +73,11 @@ static void print_menu() {
 
 
 static FILE *open_file(char **path, long *size) {
-    //if (getline(path, &getline_buffer, stdin) < 0) {
-    //    free(path);
-    //    close(sockfd);
-    //    ERROR("read user input");
-    //}
-
-    //strtok(*path, "\n");     // remove trailing newline
-
-    //if (!strcmp(*path, "quit")) {
-    //    free(path);
-    //    close(sockfd);
-    //    printf("Good bye\n");
-    //    exit(EXIT_SUCCESS);
-    //}
-
     FILE *file = fopen(*path, "r");
     printf("Path: %s\n", *path); 
     if (!file) {
         // TODO handle exception
-        free(path);
+        //free(path);
         close(sockfd);
         ERROR("opening file");
     }
@@ -107,7 +92,7 @@ static FILE *open_file(char **path, long *size) {
 
 }
 
-struct Chunk chunk;
+Chunk chunk;
 ssize_t nbytes_read, i, user_input_len;
 
 // TODO specify file path(s) over command line arguments
@@ -120,11 +105,10 @@ int main(int argc, char **argv) {
     }
 
     while (1) {
-        // menu chooser
+        // action menu
         print_menu();
 
-
-        char *path = "/home/tschan/Coding/TShare/Makefile";
+        char *path = "/home/tschan/Programming/TShare/Makefile";
         // char *path = NULL;
         long file_size = 0;
         FILE *file = open_file(&path, &file_size);
@@ -134,16 +118,21 @@ int main(int argc, char **argv) {
         printf("File %s with size: %ld opened successfully\n", path, file_size);
         //free(path);
 
-        chunk.msg = RDY;
-        chunk.size = file_size;
+        // Sending the message
+        chunk.msg = SIZE;
+        chunk.content = calloc(chunk.size, sizeof(char)); 
+        sprintf(chunk.content, "%lX", file_size);
+        chunk.size = strlen(chunk.content) + MSG_LEN;
 
+        write_msg(fd, chunk);
 
-        chunk.content = calloc(file_size, sizeof(char)); // fgets needs prealloc 
-        size_t bytes_read = fread(chunk.content, sizeof(char), file_size + 1, file);
-        if (bytes_read <= 0) {
-            ERROR("reading input file");
-        }
-        printf("Read content: %s\n", chunk.content);
+        // TODO Next step: Sending the file
+        // chunk.content = calloc(file_size, sizeof(char)); // fgets needs prealloc 
+        // size_t bytes_read = fread(chunk.content, sizeof(char), file_size + 1, file);
+        // if (bytes_read <= 0) {
+        //     ERROR("reading input file");
+        // }
+        // printf("Read content: %s\n", chunk.content);
 
         //// communication with server
         //fprintf(stdout, "enter string (empty to quit):\n");

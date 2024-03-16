@@ -58,11 +58,23 @@ int main(int argc, char **argv) {
         client_sockfd = accept(server_sockfd, (struct sockaddr*)&client_address, &client_len);
         printf("Accepted Connection, Client socked id: %d\n", client_sockfd);
 
-        while ((nbytes_read = read(client_sockfd, buffer, MAX_CHUNK_LEN)) > 0) { // read is blocking
-            printf("received:\n");
-            write(STDOUT_FILENO, buffer, nbytes_read);
-            write(client_sockfd, buffer, nbytes_read);
+        Chunk chunk;
+        // read SIZE
+        ssize_t nbytes_read = read_msg(client_sockfd, &chunk);
+        if (nbytes_read <= 0) {
+            ERROR("Receiving SIZE");
         }
+        // read FILE
+        
+
+
+
+
+        //while ((nbytes_read = read(client_sockfd, buffer, MAX_CHUNK_LEN)) > 0) { // read is blocking
+        //    printf("received:\n");
+        //    write(STDOUT_FILENO, buffer, nbytes_read);
+        //    write(client_sockfd, buffer, nbytes_read);
+        //}
         close(client_sockfd);
     }
     return EXIT_SUCCESS;
