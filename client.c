@@ -118,46 +118,33 @@ int main(int argc, char **argv) {
         printf("File %s with size: %ld opened successfully\n", path, file_size);
         //free(path);
 
-        // Sending the message
+        // Sending SIZE Chunk
         chunk.msg = SIZE;
         chunk.content = calloc(chunk.size, sizeof(char)); 
         sprintf(chunk.content, "%lX", file_size);
-        chunk.size = strlen(chunk.content) + MSG_LEN;
+        chunk.size = strlen(chunk.content);
 
-        write_msg(fd, chunk);
-
-        // TODO Next step: Sending the file
-        // chunk.content = calloc(file_size, sizeof(char)); // fgets needs prealloc 
-        // size_t bytes_read = fread(chunk.content, sizeof(char), file_size + 1, file);
-        // if (bytes_read <= 0) {
-        //     ERROR("reading input file");
-        // }
-        // printf("Read content: %s\n", chunk.content);
-
-        //// communication with server
-        //fprintf(stdout, "enter string (empty to quit):\n");
-        //user_input_len = getline(&chunk.content, &getline_buffer, stdin);
-        //if (user_input_len == -1) {
-        //    ERROR("getline");
-        //}
-        //if (user_input_len == 1) {
-        //    close(sockfd);
-        //    break;
-        //}
-        if (write_msg(sockfd, chunk) == -1) {
+        if (write_msg(sockfd, chunk) < 0) {
             ERROR("write");
         }
-
         free(chunk.content);
 
-        // writing message to additionally to stdout 
-        //while ((nbytes_read = read(sockfd, buffer, MAX_CHUNK_LEN)) > 0) {
-        //    write(STDOUT_FILENO, buffer, nbytes_read);
-        //    if (buffer[nbytes_read - 1] == '\n') {
-        //        fflush(stdout);
-        //        break;
-        //    }
-        //}
+        // Receiving ACK Chunk
+        if (read_msg(sockfd, &chunk) < 0) {
+            ERROR("read");
+        }
+        // TODO check if received correct Msg
+
+        // Sending DATA Chunk
+        // TODO
+
+        // Receiving ACK Chunk
+        // TODO
+
+        // Sending BYE Chunk
+        // TODO
+
+
         break;
     }
     close(sockfd);

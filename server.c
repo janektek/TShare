@@ -65,9 +65,13 @@ int main(int argc, char **argv) {
             ERROR("Receiving SIZE");
         }
         // read FILE
-        
-
-
+        free(chunk.content);
+        chunk.msg = ACK;
+        chunk.size = 0;
+        chunk.content = NULL;
+        if (write_msg(client_sockfd, chunk) < 0) {
+            ERROR("write");
+        }
 
 
         //while ((nbytes_read = read(client_sockfd, buffer, MAX_CHUNK_LEN)) > 0) { // read is blocking
