@@ -1,7 +1,5 @@
 # set your preferred compiler
 COMPILER = gcc
-BUILD_DIR = ./build/
-SRC_DIR = ./src/
 
 # set your preferred terminal
 TERMINAL = xfce4-terminal 
@@ -11,19 +9,19 @@ FLAGS = -Wall -Wextra -ggdb
 
 build: buildc builds
 
-buildc: $(SRC_DIR)client.c $(SRC_DIR)info.h
-	$(COMPILER) $(FLAGS) -o $(BUILD_DIR)client $(SRC_DIR)client.c
+buildc: client.c info.h
+	$(COMPILER) $(FLAGS) -o client client.c
 
-builds: $(SRC_DIR)server.c $(SRC_DIR)info.h
-	$(COMPILER) $(FLAGS) -o $(BUILD_DIR)server $(SRC_DIR)server.c
+builds: server.c info.h
+	$(COMPILER) $(FLAGS) -o server server.c
 
 run: 
-	$(TERMINAL) -e $(BUILD_DIR)server
-	$(TERMINAL) -e $(BUILD_DIR)client 
+	$(TERMINAL) -e server
+	$(TERMINAL) -e client 
 
 all: build run
 
 clean:
-	rm $(BUILD_DIR)client
-	rm $(BUILD_DIR)server
+	rm client
+	rm server
 
