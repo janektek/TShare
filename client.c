@@ -1,4 +1,4 @@
-#include "info.h"
+#include "chunk.h"
 #include <errno.h>
 
 char buffer[MAX_CHUNK_LEN];

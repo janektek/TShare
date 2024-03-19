@@ -9,10 +9,10 @@ FLAGS = -Wall -Wextra -ggdb
 
 build: buildc builds
 
-buildc: client.c info.h
+buildc: client.c chunk.h
 	$(COMPILER) $(FLAGS) -o client client.c
 
-builds: server.c info.h
+builds: server.c chunk.h
 	$(COMPILER) $(FLAGS) -o server server.c
 
 run: 

@@ -1,4 +1,4 @@
-#include "info.h"
+#include "chunk.h"
 
 char buffer[MAX_CHUNK_LEN];
 char *protoname = "tcp";
