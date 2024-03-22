@@ -72,10 +72,9 @@ static void print_menu() {
 
 static FILE *open_file(char **path, long *size) {
     FILE *file = fopen(*path, "r");
-    printf("Path: %s\n", *path); 
+    //printf("Path: %s\n", *path); 
     if (!file) {
-        // TODO handle exception
-        //free(path);
+        free(path);
         close(sockfd);
         ERROR("opening file");
     }
@@ -106,35 +105,28 @@ int main(int argc, char **argv) {
         // action menu
         print_menu();
 
-        char *path = "/home/tschan/Programming/TShare/test.txt";
-        // char *path = NULL;
+        // char *path = "/home/tschan/Programming/TShare/Makefile";
+        char *path;
+        size_t n = 0;
+        if (getline(&path, &n, stdin) <= 0) {
+            ERROR("reading stdin");
+        }
         long file_size = 0;
+        strtok(path, "\n"); // remove leading newline
         FILE *file = open_file(&path, &file_size);
 
         printf("File %s with size: %ld opened successfully\n", path, file_size);
-        //free(path);
+        free(path);
 
         // send SIZE 
         chunk.msg = SIZE;
         chunk.content = calloc(chunk.size, sizeof(char)); 
         sprintf(chunk.content, "%lX", file_size);
         chunk.size = strlen(chunk.content);
-
-        if (write_msg(sockfd, chunk) < 0) {
-            ERROR("write chunk");
-        }
-        free(chunk.content);
+        send_chunk(chunk, sockfd);
 
         // receive ACK 
-        if (read_msg(sockfd, &chunk) < 0) {
-            ERROR("read chunk");
-        }
-        if (!check_msg(chunk, ACK)) {
-            ERROR("check correct msg");
-        }
-        if (chunk.content != NULL) {
-            free(chunk.content);
-        }
+        receive_chunk(&chunk, ACK, sockfd);
 
         // send DATA 
         chunk.msg = DATA;
@@ -146,32 +138,22 @@ int main(int argc, char **argv) {
         if (fread(chunk.content, file_size, sizeof(char), file) == 0) {
             ERROR("read file");
         }
-        if (write_msg(sockfd, chunk) < 0) {
-            ERROR("write chunk");
-        }
+        send_chunk(chunk, sockfd);
 
         // receive ACK 
-        if (read_msg(sockfd, &chunk) < 0) {
-            ERROR("read chunk");
-        }
-        if (!check_msg(chunk, ACK)) {
-            ERROR("check correct msg");
-        }
-        if (chunk.content != NULL) {
-            free(chunk.content);
-        }
+        receive_chunk(&chunk, ACK, sockfd);
 
         // send BYE 
         chunk.msg = BYE;
         chunk.size = 0;
         chunk.content = NULL;
-        if (write_msg(sockfd, chunk) < 0) {
-            ERROR("write chunk");
-        }
+        send_chunk(chunk, sockfd);
         break;
     }
     close(sockfd);
-    //free(chunk.content);
+    if (chunk.content) {
+        free(chunk.content);
+    }
 
     exit(EXIT_SUCCESS);
 }

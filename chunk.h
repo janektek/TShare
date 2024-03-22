@@ -42,6 +42,7 @@ typedef struct {
     char *content;
 } Chunk;
 
+
 // possible meta messages
 static char *messages[] = {"HELO", "SIZE", "DATA", "ACK", "BYE"};
 
@@ -58,6 +59,7 @@ void print_chunk(Chunk chunk) {
 bool check_msg(Chunk chunk, enum Msg actual) {
     return chunk.msg == actual;
 }
+
 
 static char *build_msg(Chunk chunk) {
     // print_chunk(chunk);
@@ -161,6 +163,23 @@ ssize_t read_msg(int fd, Chunk *chunk) {
     return bytes_read;
 }
 
+void send_chunk(Chunk chunk, int sockfd) {
+    if (write_msg(sockfd, chunk) < 0) {
+        ERROR("write chunk");
+    }
+} 
+
+void receive_chunk(Chunk *chunk, enum Msg expected, int sockfd) {
+    if (chunk->content) {
+        free(chunk->content);
+    }
+    if (read_msg(sockfd, chunk) < 0) {
+        ERROR("read chunk");
+    }
+    if (!check_msg(*chunk, expected)) {
+        ERROR("check correct msg");
+    }
+} 
 
 
 

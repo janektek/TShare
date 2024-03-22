@@ -73,9 +73,8 @@ int main(int argc, char **argv) {
 
         // send ACK
         chunk.msg = ACK;
-        chunk.size = 3;
-        chunk.content = malloc(4);
-        chunk.content = "ACK\0";
+        chunk.size = 0;
+        chunk.content = NULL;
         if (write_msg(client_sockfd, chunk) < 0) {
             ERROR("write chunk");
         }
