@@ -1,13 +1,5 @@
 ## TODOs
 
-### FILE: info.h
-
-- make read_msg return an actual enum
-- write a message parser for read operations
-
-### FILE: server.c
-
-- fix client losing connection when writing only '\n'
-
-### FILE: client.c
-
+- send multiples files/directories in same connection (without restarting the client) 
+- fix read/write_msg not getting/sending correct msg (I suppose this happens after writing NULL content)
+- Idea for correct error handling (return value) in read/write_msg

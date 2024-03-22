@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE 700
 
 #include <assert.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,22 +12,20 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <stdbool.h>
 
-#define ERROR(msg) do { \
-        perror(msg);        \
-        exit(EXIT_FAILURE); \
-    } while(0)              \
+#define ERROR(str)                                      \
+do {                                                    \
+    fprintf(stderr,                                     \
+            "[ERROR] in function %s\n Caused by: %s\n errno: %s\n"\
+            , __func__ , str,  strerror(errno));        \
+    exit(EXIT_FAILURE);                                 \
+} while (0)                     
 
 #define UNUSED(x) (void)(x)
 
 
-// max_chunk_len = Msg + '\n' + file_size + \n' + raw_content + NULL
-//         bytes:   1      1    size(long)  1      2000       +  1 = 1 + 1 + 4 + 1 + 2000 + 1 = 2008 bytes max
-#define MAX_CHUNK_LEN 2000
-#define CONTENT_SIZE 2000
-#define MSG_EXTRA sizeof(long) * 2 + 2  
-
-
+#define MSG_EXTRA sizeof(long) * 2 + 2  // extra bits for chunk alloc
 
 enum Msg {
     HELO = 0,
@@ -56,19 +55,25 @@ void print_chunk(Chunk chunk) {
     printf("Chunk: \n\tMsg: %s\n\tSize: %ld\n\tContent: %s\n", msg_string(chunk.msg), chunk.size, chunk.content);
 }
 
+bool check_msg(Chunk chunk, enum Msg actual) {
+    return chunk.msg == actual;
+}
+
 static char *build_msg(Chunk chunk) {
     // print_chunk(chunk);
     size_t counter = 0;
 
     // encode Msg
-    char *buf = calloc(sizeof(char), chunk.size + MSG_EXTRA);
+    char *buf = malloc(chunk.size + MSG_EXTRA);
+    if (!buf) ERROR("malloc");
     buf[counter++] = chunk.msg + '0';
     buf[counter++] = '\n';
 
     // encode Size of content
     char *len_str = malloc(sizeof(long) * 2); // 1 Hex digit = 4 bits 
-    if(sprintf(len_str, "%lX", chunk.size) < 0) {
-        ERROR("sprintf");
+    if (!len_str) ERROR("malloc");
+    if (sprintf(len_str, "%lX", chunk.size) < 0) {
+        ERROR("converting long to string");
     }
     for (size_t i = 0; i < strlen(len_str); i++) {
         buf[counter++] = len_str[i];
@@ -83,52 +88,46 @@ static char *build_msg(Chunk chunk) {
         }
     }
     buf[counter++] = '\0';  // end of chunk
-
-    // printf("Created message: \n%s\n", buf);
     return buf;
 }
 
 ssize_t write_msg(int fd, Chunk chunk) {
+    printf("------------------------- WRITE CHUNK -------------------------\n");
+    printf("[DEBUG] Writing msg: %s\n", msg_string(chunk.msg));
+    printf("[DEBUG] Writing size: %ld\n", chunk.size);
+    printf("[DEBUG] Writing content: %s\n", chunk.content);
     char *str = build_msg(chunk);
-    ssize_t ret = write(fd, str, chunk.size + MSG_EXTRA);
+    ssize_t written = 0;
+    do {
+        written += write(fd, str, chunk.size + MSG_EXTRA);
+    } while (written <= chunk.size);
     free(str);
-    switch (chunk.msg) {
-        case HELO:
-           printf("Writing HELO Msg\n");
-           break;
-        case SIZE:
-           printf("Writing SIZE Msg\n");
-           break;
-        case DATA:
-            printf("Writing DATA Msg\n");
-            break;
-        case ACK:
-           printf("Writing ACK Msg\n");
-           break;
-        case BYE:
-           printf("Writing BYE Msg\n");
-           break;
-        default: 
-            assert(0 && "Unreachable");
-            return -1;
-    }
-    return ret;
+    print_chunk(chunk);
+    printf("------------------------- \\WRITE CHUNK ------------------------\n");
+    return written;
 }
 
 ssize_t read_msg(int fd, Chunk *chunk) {
+    printf("------------------------- READ CHUNK -------------------------\n");
 
-    // read only msg
+    // read msg
     char msg[2];
-    chunk->size = 0;
-    chunk->content = NULL;
-    ssize_t bytes_read = read(fd, msg, 2); 
-    if (msg[1] != '\n' || bytes_read <= 0) {
-        return -1;
-    }
+    ssize_t bytes_read = 0;
+    do { 
+        bytes_read = 0;
+        chunk->msg = 0;
+        chunk->size = 0;
+        chunk->content = NULL;
+        bytes_read = read(fd, msg, 2); 
+    } while (msg[1] != '\n');       // skip garbage reads 
+
+
     chunk->msg = msg[0] - '0';
+    printf("[DEBUG] Read msg: %s\n", msg_string(chunk->msg));
 
     // read content size
     char *len_str = malloc(sizeof(long) * 2);
+    if (!len_str) ERROR("malloc");
 
     // read byte by byte until newline is encountered
     for (size_t i = 0; i < sizeof(long) * 2; i++) {
@@ -139,33 +138,26 @@ ssize_t read_msg(int fd, Chunk *chunk) {
     } 
     chunk->size = strtol(len_str, NULL, 16); 
     free(len_str);
+    printf("[DEBUG] Read size: %ld\n", chunk->size);
 
     // read content
-    chunk->content = calloc(MAX_CHUNK_LEN, sizeof(char));
-    bytes_read += read(fd, chunk->content, MAX_CHUNK_LEN);
+    bytes_read = 0;
+    if (chunk->size != 0) {
+        chunk->content = malloc(chunk->size);
+        if (!chunk->content) {
+            ERROR("malloc");
+        }
+        
+        do { 
+            bytes_read += read(fd, chunk->content, chunk->size + 1);
+            printf("[DEBUG] Reading content ...\n");
+        } while (bytes_read <= chunk->size);
 
-    switch (chunk->msg) {
-        case HELO:
-           printf("Received HELO Msg\n");
-           break;
-        case SIZE:
-           printf("Received SIZE Msg\n");
-           break;
-        case DATA:
-            printf("Received DATA Msg\n");
-            break;
-        case ACK:
-           printf("Received ACK Msg\n");
-           break;
-        case BYE:
-           printf("Received BYE Msg\n");
-           break;
-        default: 
-            assert(0 && "Unreachable");
-            return -1;
+        printf("[DEBUG] Read content: %s\n", chunk->content);
     }
+    print_chunk(*chunk);
+    printf("------------------------- \\READ CHUNK ------------------------\n");
 
-    // print_chunk(*chunk);
     return bytes_read;
 }
 

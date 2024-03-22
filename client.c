@@ -1,14 +1,12 @@
 #include "chunk.h"
 #include <errno.h>
 
-char buffer[MAX_CHUNK_LEN];
 char protoname[] = "tcp";
 struct protoent *protoent;
 char *server_hostname = "127.0.0.1";
 in_addr_t in_addr;
 in_addr_t server_addr;
 int sockfd;
-size_t getline_buffer = 0;
 struct hostent *hostent;
 
 /* This is the struct used by INet addresses. */
@@ -27,7 +25,7 @@ int init_client(int argc, char **argv) {
     /* Get socket. */
     protoent = getprotobyname(protoname);
     if (protoent == NULL) {
-        ERROR("getprotobyname");
+        ERROR("getting protocol name");
     }
     sockfd = socket(AF_INET, SOCK_STREAM, protoent->p_proto);
     if (sockfd == -1) {
@@ -108,43 +106,68 @@ int main(int argc, char **argv) {
         // action menu
         print_menu();
 
-        char *path = "/home/tschan/Programming/TShare/Makefile";
+        char *path = "/home/tschan/Programming/TShare/test.txt";
         // char *path = NULL;
         long file_size = 0;
         FILE *file = open_file(&path, &file_size);
-        int fd = fileno(file);
-        printf("FD: %d\n", fd);
 
         printf("File %s with size: %ld opened successfully\n", path, file_size);
         //free(path);
 
-        // Sending SIZE Chunk
+        // send SIZE 
         chunk.msg = SIZE;
         chunk.content = calloc(chunk.size, sizeof(char)); 
         sprintf(chunk.content, "%lX", file_size);
         chunk.size = strlen(chunk.content);
 
         if (write_msg(sockfd, chunk) < 0) {
-            ERROR("write");
+            ERROR("write chunk");
         }
         free(chunk.content);
 
-        // Receiving ACK Chunk
+        // receive ACK 
         if (read_msg(sockfd, &chunk) < 0) {
-            ERROR("read");
+            ERROR("read chunk");
         }
-        // TODO check if received correct Msg
+        if (!check_msg(chunk, ACK)) {
+            ERROR("check correct msg");
+        }
+        if (chunk.content != NULL) {
+            free(chunk.content);
+        }
 
-        // Sending DATA Chunk
-        // TODO
+        // send DATA 
+        chunk.msg = DATA;
+        chunk.size = file_size;
+        chunk.content = malloc(file_size + 1); 
+        if (!chunk.content) {
+            ERROR("malloc");
+        }
+        if (fread(chunk.content, file_size, sizeof(char), file) == 0) {
+            ERROR("read file");
+        }
+        if (write_msg(sockfd, chunk) < 0) {
+            ERROR("write chunk");
+        }
 
-        // Receiving ACK Chunk
-        // TODO
+        // receive ACK 
+        if (read_msg(sockfd, &chunk) < 0) {
+            ERROR("read chunk");
+        }
+        if (!check_msg(chunk, ACK)) {
+            ERROR("check correct msg");
+        }
+        if (chunk.content != NULL) {
+            free(chunk.content);
+        }
 
-        // Sending BYE Chunk
-        // TODO
-
-
+        // send BYE 
+        chunk.msg = BYE;
+        chunk.size = 0;
+        chunk.content = NULL;
+        if (write_msg(sockfd, chunk) < 0) {
+            ERROR("write chunk");
+        }
         break;
     }
     close(sockfd);
